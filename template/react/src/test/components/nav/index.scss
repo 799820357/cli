@@ -1,0 +1,19 @@
+.nav-board{
+    width: 150px;
+    li{
+        line-height: 30px;
+        padding: 0 0 0 20px;
+        background-repeat: no-repeat;
+        background-color: blue;
+        margin: 0 0 5px;
+        &.on{
+            color: red;
+        }
+        &:nth-child(1){
+            background-image: url(../../images/sprite/nav/1.png);
+        }
+        &:nth-child(2){
+            background-image: url(../../images/sprite/nav/2.png);
+        }
+    }
+}
