@@ -9,6 +9,7 @@ const { spawn } = require('child_process');
 const urlencode = require('urlencode');
 const ora = require('ora');
 const symbols = require('log-symbols');
+const { Console } = require('console');
 //选择获取类型
 let getProjectType = () => {
     let typeList = [
@@ -27,33 +28,41 @@ let getProjectType = () => {
 //检测单项目
 const checkSingle = (type,temPath) => {
     return new Promise((resolve,reject) => {
-        if(type == 'single'){
-            let pkgUrl = path.join(temPath,'setting','single','package.json'),
-            wpcUrl = path.join(temPath,'setting','single','webpack-config');
-            //package处理
-            let pkgData = fs.readFileSync(pkgUrl,'utf-8');
-            fs.writeFile(path.join(temPath,'package.json'), pkgData, 'utf-8',function(err){
-                if(err)console.log('写文件出错了，错误是：'+err);
-            });
-            //webpack-config处理
-            let wpconfigFiles = fs.readdirSync(path.join(temPath,'setting','single','webpack-config'));
-            if(wpconfigFiles.length){
-                wpconfigFiles.forEach(name => {
-                    let data = fs.readFileSync(path.join(wpcUrl,name),'utf-8');
-                    fs.writeFile(path.join(temPath,'webpack-config',name), data, 'utf-8',function(err){
-                        if(err)console.log('写文件出错了，错误是：'+err);
-                    });
-                })
-            };
-            //拷贝文件
-            fse.copySync(path.join(temPath,'src','test'),path.join(temPath,'src'));
-            fse.removeSync(path.join(temPath,'src','test')); 
+        try{
+            if(type == 'single'){
+                let wpcUrl = path.join(temPath,'setting','single','webpack-config');
+                //package处理
+                let pkgData = JSON.parse(fs.readFileSync(path.join(temPath,'package.json'),'utf-8'));
+                pkgData['scripts'] = {
+                    "dev": "cross-env NODE_ENV=mode:development webpack-dev-server",
+                    "pro": "cross-env NODE_ENV=mode:production webpack"
+                };
+                pkgData = JSON.stringify(pkgData,null,4);
+                fs.writeFile(path.join(temPath,'package.json'), pkgData, 'utf-8',function(err){
+                    if(err)console.log('写文件出错了，错误是：'+err);
+                });
+                //webpack-config处理
+                let wpconfigFiles = fs.readdirSync(path.join(temPath,'setting','single','webpack-config'));
+                if(wpconfigFiles.length){
+                    wpconfigFiles.forEach(name => {
+                        let data = fs.readFileSync(path.join(wpcUrl,name),'utf-8');
+                        fs.writeFile(path.join(temPath,'webpack-config',name), data, 'utf-8',function(err){
+                            if(err)console.log('写文件出错了，错误是：'+err);
+                        });
+                    })
+                };
+                //拷贝文件
+                fse.copySync(path.join(temPath,'src','test'),path.join(temPath,'src'));
+                fse.removeSync(path.join(temPath,'src','test')); 
+            }
+            //删除多余文件夹
+            fse.removeSync(path.join(temPath,'setting'));
+            //删除git文件
+            fse.removeSync(path.join(temPath,'.git'));
+            resolve();
+        }catch(e){
+            reject(e);
         }
-        //删除多余文件夹
-        fse.removeSync(path.join(temPath,'setting'));
-        //删除git文件
-        fse.removeSync(path.join(temPath,'.git'));
-        resolve();
     });
 };
 //命令
@@ -65,6 +74,8 @@ module.exports = (program) => {
             //判断是否存在目录
             if(!fs.existsSync(temPath)){
                 fs.mkdirSync(temPath)
+            }else{
+                fse.emptydirSync(temPath)
             }
             if (dir) {
                 console.log(chalk.green(`欢迎使用create-react cli`));
