@@ -57,48 +57,68 @@ const checkSingle = (type,temPath) => {
             }
             //删除多余文件夹
             fse.removeSync(path.join(temPath,'setting'));
-            //删除git文件
-            fse.removeSync(path.join(temPath,'.git'));
             resolve();
         }catch(e){
             reject(e);
         }
     });
 };
+let pullGit = (gitPath,isMove) => {
+    return new Promise((resolve,reject) => {
+        let orgPath = gitPath;
+        if(isMove){
+            gitPath = path.join(gitPath,`temp${+ new Date}`);
+            fse.mkdirSync(gitPath);
+        }
+        gitClone("https://github.com/799820357/webpack-react.git",gitPath).then(res => {
+            //删除git文件
+            fse.removeSync(path.join(gitPath,'.git'));
+            //是否需要移动文件夹
+            if(isMove){
+                //拷贝文件
+                fse.copySync(gitPath,orgPath);
+                //删除git文件
+                fse.removeSync(gitPath);
+            }
+            resolve();
+        },err => {
+            reject();
+        });
+    })
+}
 //命令
 module.exports = (program) => {
     //program
-    program.command('create-react <project>')
+    program.command('create-react [dir]')
         .action((dir,cmd) => {
+            dir = dir || '';
             const temPath = path.join(cwd,dir);
             //判断是否存在目录
-            if(!fs.existsSync(temPath)){
-                fs.mkdirSync(temPath)
+            if(!fse.existsSync(temPath)){
+                fse.mkdirSync(temPath)
             }else{
                 fse.emptydirSync(temPath)
             }
-            if (dir) {
-                console.log(chalk.green(`欢迎使用create-react cli`));
-                getProjectType().then(res => {
-                    const type = res.type;
-                    const cliProgress = ora(`项目正在创建, 请等待...`);
-                    cliProgress.start();
-                    gitClone("https://github.com/799820357/webpack-react.git",temPath).then(res => {
-                        //检测单项目
-                        checkSingle(type,temPath).then(() => {
-                            let c_process = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ['install'], {
-                                stdio: 'inherit',
-                                cwd: temPath
-                            });
-                            c_process.on('close', function (code) {
-                                cliProgress.succeed(chalk.green('react项目构建完成，祝开心每一天~~~'));
-                            });
+            console.log(chalk.green(`欢迎使用create-react cli`));
+            getProjectType().then(res => {
+                const type = res.type;
+                const cliProgress = ora(`项目正在创建, 请等待...`);
+                cliProgress.start();
+                pullGit(temPath,!!!dir).then(res => {
+                    //检测单项目
+                    checkSingle(type,temPath).then(() => {
+                        let c_process = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ['install'], {
+                            stdio: 'inherit',
+                            cwd: temPath
                         });
-                    },err => {
-                        cliProgress.fail();
-                        console.log(symbols.error, chalk.red(err))
+                        c_process.on('close', function (code) {
+                            cliProgress.succeed(chalk.green('react项目构建完成，祝开心每一天~~~'));
+                        });
                     });
+                },err => {
+                    cliProgress.fail();
+                    console.log(symbols.error, chalk.red(err))
                 });
-            }
+            });
         });
 }
