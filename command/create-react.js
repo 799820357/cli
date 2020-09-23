@@ -97,7 +97,7 @@ module.exports = (program) => {
             if(!fse.existsSync(temPath)){
                 fse.mkdirSync(temPath)
             }else{
-                fse.emptydirSync(temPath)
+                // fse.emptydirSync(temPath)
             }
             console.log(chalk.green(`欢迎使用create-react cli`));
             getProjectType().then(res => {
